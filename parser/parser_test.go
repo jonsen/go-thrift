@@ -77,7 +77,14 @@ func TestServiceParsing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Service parsing failed with error %s", err.Error())
 	}
-
+	var namespaces = map[string]string{
+		"go":                "somepkg",
+		"python":            "some.module123",
+		"python.py-twisted": "another",
+	}
+	if !reflect.DeepEqual(thrift.Namespaces, namespaces) {
+		t.Errorf("Expected for Namespaces:\n%s\ngot\n%s", pprint(namespaces), pprint(thrift.Namespaces))
+	}
 	if thrift.Includes["other"] != "other.thrift" {
 		t.Errorf("Include not parsed: %+v", thrift.Includes)
 	}
