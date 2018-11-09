@@ -51,6 +51,64 @@ func toAnnotations(v interface{}) []*Annotation {
 	}
 	return v.([]*Annotation)
 }
+
+func toComment(v interface{}) string {
+	ifs := toIfaceSlice(v)
+	if len(ifs) < 2 {
+		return ""
+	}
+	c := ifs[1].([]interface{})
+	b := make([]byte, len(c))
+	for i, v := range c {
+		b[i] = v.([]interface{})[1].([]uint8)[0]
+	}
+	return strings.TrimSpace(SpaceInOne(string(b)))
+}
+
+func toDoc(v interface{}) string {
+	var doc = make([]byte, 0, 64)
+	for _, vv := range toIfaceSlice(v) {
+		ifs := toIfaceSlice(vv)
+		if len(ifs)>0{
+			doc = append(doc, toComment(ifs[0])...)
+			doc = append(doc, '\n')
+		}
+	}
+	return strings.TrimSpace(SpaceInOne(string(doc)))
+}
+
+func joinComment(comment ...string)string{
+	return strings.TrimSpace(SpaceInOne(strings.Join(comment, "\n")))
+}
+
+var spaceReplacer = strings.NewReplacer(
+	"  ", " ",
+	"\n\n", "\n",
+	"\r\r", "\r",
+	"\t\t", "\t",
+	"\r\n\r\n", "\r\n",
+	" \n", "\n",
+	"\t\n", "\n",
+	" \t", "\t",
+	"\t ", "\t",
+	"\v\v", "\v",
+	"\f\f", "\f",
+	string(0x85)+string(0x85),
+	string(0x85),
+	string(0xA0)+string(0xA0),
+	string(0xA0),
+)
+
+// SpaceInOne combines multiple consecutive space characters into one.
+func SpaceInOne(s string) string {
+	var old string
+	for old != s {
+		old = s
+		s = spaceReplacer.Replace(s)
+	}
+	return s
+}
+
 }
 
 Grammar ← __ statements:( Statement __ )* (EOF / SyntaxError) {
@@ -169,7 +227,7 @@ TypeDef ← "typedef" _ typ:FieldType _ name:Identifier _ annotations:TypeAnnota
 Struct ← "struct" _ st:StructLike { return st.(*Struct), nil }
 Exception ← "exception" _ st:StructLike { return exception(st.(*Struct)), nil }
 Union ← "union" _ st:StructLike { return union(st.(*Struct)), nil }
-StructLike ← name:Identifier __ '{' __ fields:FieldList '}' _ annotations:TypeAnnotations? EOS {
+StructLike ← name:Identifier __ '{' WE fields:FieldList '}' _ annotations:TypeAnnotations? EOS {
 	st := &Struct{
 		Name: string(name.(Identifier)),
 		Annotations: toAnnotations(annotations),
@@ -180,7 +238,7 @@ StructLike ← name:Identifier __ '{' __ fields:FieldList '}' _ annotations:Type
 	return st, nil
 }
 
-FieldList ← fields:(Field __)* {
+FieldList ← fields:(Field WE)* {
 	fs := fields.([]interface{})
 	flds := make([]*Field, len(fs))
 	for i, f := range fs {
@@ -189,12 +247,13 @@ FieldList ← fields:(Field __)* {
 	return flds, nil
 }
 
-Field ← id:IntConstant _ ':' _ req:FieldReq? _ typ:FieldType _ name:Identifier __ def:('=' _ ConstValue)? _ annotations:TypeAnnotations? ListSeparator? {
+Field ← WE doc:(Comment WE)* id:IntConstant _ ':' _ req:FieldReq? _ typ:FieldType _ name:Identifier WS comment1:Comment? WE def:('=' _ ConstValue)? WS comment2:Comment? annotations:TypeAnnotations? ListSeparator? WS comment3:Comment? {
 	f := &Field{
 		ID       : int(id.(int64)),
 		Name     : string(name.(Identifier)),
 		Type     : typ.(*Type),
 		Annotations: toAnnotations(annotations),
+		Comment: joinComment(toDoc(doc),toComment(comment1),toComment(comment2),toComment(comment3)),
 	}
 	if req != nil && !req.(bool) {
 		f.Optional = true
@@ -209,7 +268,7 @@ FieldReq ← ("required" / "optional") {
 	return !bytes.Equal(c.text, []byte("optional")), nil
 }
 
-Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' __ methods:(Function __)* ('}' / EndOfServiceError) _ annotations:TypeAnnotations?  EOS {
+Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' methods:(Function WE)* ('}' / EndOfServiceError) _ annotations:TypeAnnotations?  EOS {
 	ms := methods.([]interface{})
 	svc := &Service{
 		Name: string(name.(Identifier)),
@@ -229,10 +288,11 @@ EndOfServiceError ← . {
 	return nil, errors.New("parser: expected end of service")
 }
 
-Function ← oneway:("oneway" __)? typ:FunctionType __ name:Identifier _ '(' __ arguments:FieldList ')' __ exceptions:Throws? _ annotations:TypeAnnotations? ListSeparator? {
+Function ← WE doc:(Comment WE)* oneway:("oneway" __)? typ:FunctionType __ name:Identifier _ '(' __ arguments:FieldList ')' WS comment1:Comment? WE exceptions:Throws? WS comment2:Comment? annotations:TypeAnnotations? ListSeparator? WS comment3:Comment? {
 	m := &Method{
 		Name: string(name.(Identifier)),
 		Annotations: toAnnotations(annotations),
+		Comment: joinComment(toDoc(doc),toComment(comment1),toComment(comment2),toComment(comment3)),
 	}
 	t := typ.(*Type)
 	if t.Name != "void" {
@@ -321,7 +381,7 @@ CppType ← "cpp_type" cppType:Literal {
 
 ConstValue ← Literal / DoubleConstant / IntConstant / ConstMap / ConstList / Identifier
 
-TypeAnnotations ← '(' __ annotations:TypeAnnotation* ')' {
+TypeAnnotations ← '(' annotations:TypeAnnotation* ')' {
 	var anns []*Annotation
 	for _, ann := range annotations.([]interface{}) {
 		anns = append(anns, ann.(*Annotation))
@@ -329,7 +389,7 @@ TypeAnnotations ← '(' __ annotations:TypeAnnotation* ')' {
 	return anns, nil
 }
 
-TypeAnnotation ← name:Identifier _ value:('=' __ value:Literal { return value, nil })? ListSeparator? __ {
+TypeAnnotation ← __ name:Identifier _ value:('=' __ value:Literal { return value, nil })? ListSeparator? WE {
 	var optValue string
 	if value != nil {
 		optValue = value.(string)
@@ -389,6 +449,8 @@ Letter ← [A-Za-z]
 Digit ← [0-9]
 
 //
+
+WE ← ( Whitespace / EOL )*
 
 SourceChar ← .
 Comment ← MultiLineComment / SingleLineComment

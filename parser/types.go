@@ -41,6 +41,7 @@ type Constant struct {
 type Field struct {
 	ID          int
 	Name        string
+	Comment     string
 	Optional    bool
 	Type        *Type
 	Default     interface{}

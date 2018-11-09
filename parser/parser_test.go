@@ -28,8 +28,9 @@ func TestServiceParsing(t *testing.T) {
 
 		union myUnion
 		{
-			1: double dbl = 1.1;
-			2: string str = "2";
+			// dbl comment1
+			1: double dbl = 1.1; // dbl comment2
+			2: string str = "2"; /* str comment */
 			3: i32 int32 = 3;
 			4: i64 int64
 				= 5;
@@ -52,14 +53,17 @@ func TestServiceParsing(t *testing.T) {
 			// comment2
 			/* some other
 			   comments */
-			string login(1:string password) throws (1:AuthenticationException authex),
-			oneway void explode();
+			string login(1:string password) throws (1:AuthenticationException authex), // login handler
+			oneway void explode(); /* explode handler */
 			blah something()
 		}
 
+		// SomeStruct comment
 		struct SomeStruct {
-			1: double dbl = 1.2,
-			2: optional string abc
+			// dbl comment1
+			1: double dbl = 1.2, // dbl comment2
+			// abc comment1
+			2: optional string abc // abc comment2
 		}
 
 		struct NewLineBeforeBrace
@@ -121,6 +125,7 @@ func TestServiceParsing(t *testing.T) {
 				Type: &Type{
 					Name: "double",
 				},
+				Comment: "dbl comment1\ndbl comment2",
 			},
 			{
 				ID:       2,
@@ -129,6 +134,7 @@ func TestServiceParsing(t *testing.T) {
 				Type: &Type{
 					Name: "string",
 				},
+				Comment: "abc comment1\nabc comment2",
 			},
 		},
 	}
@@ -144,6 +150,7 @@ func TestServiceParsing(t *testing.T) {
 			{
 				ID:       1,
 				Name:     "dbl",
+				Comment:  "dbl comment1\ndbl comment2",
 				Default:  1.1,
 				Optional: true,
 				Type: &Type{
@@ -153,6 +160,7 @@ func TestServiceParsing(t *testing.T) {
 			{
 				ID:       2,
 				Name:     "str",
+				Comment:  "str comment",
 				Default:  "2",
 				Optional: true,
 				Type: &Type{
@@ -220,7 +228,8 @@ func TestServiceParsing(t *testing.T) {
 			Extends: "SomeBase",
 			Methods: map[string]*Method{
 				"login": &Method{
-					Name: "login",
+					Name:    "login",
+					Comment: "authenticate method\ncomment2\nsome other\n\tcomments\nlogin handler",
 					ReturnType: &Type{
 						Name: "string",
 					},
@@ -247,6 +256,7 @@ func TestServiceParsing(t *testing.T) {
 				},
 				"explode": &Method{
 					Name:       "explode",
+					Comment:    "explode handler",
 					ReturnType: nil,
 					Oneway:     true,
 					Arguments:  []*Field{},
