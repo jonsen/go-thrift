@@ -5,9 +5,139 @@ package parser
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
+
+
+type Type struct {
+	Name        string
+	KeyType     *Type // If map
+	ValueType   *Type // If map, list, or set
+	Annotations []*Annotation
+}
+
+type Typedef struct {
+	*Type
+	Alias       string
+	Annotations []*Annotation
+	Comment     string
+}
+
+func (t *Typedef) setComment(comment string) {
+	t.Comment = comment
+}
+
+type EnumValue struct {
+	Name        string
+	Value       int
+	Annotations []*Annotation
+}
+
+type Enum struct {
+	Name        string
+	Values      map[string]*EnumValue
+	Annotations []*Annotation
+	Comment     string
+}
+
+func (e *Enum) setComment(comment string) {
+	e.Comment = comment
+}
+
+type Constant struct {
+	Name    string
+	Type    *Type
+	Value   interface{}
+	Comment string
+}
+
+func (c *Constant) setComment(comment string) {
+	c.Comment = comment
+}
+
+type Field struct {
+	ID          int
+	Name        string
+	Comment     string
+	Optional    bool
+	Type        *Type
+	Default     interface{}
+	Annotations []*Annotation
+}
+
+type Struct struct {
+	Name        string
+	Fields      []*Field
+	Annotations []*Annotation
+	Comment     string
+}
+
+func (s *Struct) setComment(comment string) {
+	s.Comment = comment
+}
+
+type Method struct {
+	Comment     string
+	Name        string
+	Oneway      bool
+	ReturnType  *Type
+	Arguments   []*Field
+	Exceptions  []*Field
+	Annotations []*Annotation
+}
+
+type Service struct {
+	Name        string
+	Extends     string
+	Comment     string
+	Methods     map[string]*Method
+	Annotations []*Annotation
+}
+
+func (s *Service) setComment(comment string) {
+	s.Comment = comment
+}
+
+type Thrift struct {
+	Includes   map[string]string // name -> unique identifier (absolute path generally)
+	Typedefs   map[string]*Typedef
+	Namespaces map[string]string
+	Constants  map[string]*Constant
+	Enums      map[string]*Enum
+	Structs    map[string]*Struct
+	Exceptions map[string]*Struct
+	Unions     map[string]*Struct
+	Services   map[string]*Service
+}
+
+type Identifier string
+
+type KeyValue struct {
+	Key, Value interface{}
+}
+
+type Annotation struct {
+	Name  string
+	Value string
+}
+
+func (t *Type) String() string {
+	switch t.Name {
+	case "map":
+		return fmt.Sprintf("map<%s,%s>", t.KeyType.String(), t.ValueType.String())
+	case "list":
+		return fmt.Sprintf("list<%s>", t.ValueType.String())
+	case "set":
+		return fmt.Sprintf("set<%s>", t.ValueType.String())
+	}
+	return t.Name
+}
+
+type commenter interface {
+	setComment(string)
+}
 
 type namespace struct {
 	scope string
@@ -111,7 +241,7 @@ func SpaceInOne(s string) string {
 
 }
 
-Grammar ← __ statements:( Statement __ )* (EOF / SyntaxError) {
+Grammar ← __ statements:( Statement WE )* (EOF / SyntaxError) {
 	thrift := &Thrift{
 		Includes: make(map[string]string),
 		Namespaces: make(map[string]string),
@@ -163,7 +293,16 @@ Include ← "include" _ file:Literal EOS {
 	return include(file.(string)), nil
 }
 
-Statement ← Include / Namespace / Const / Enum / TypeDef / Struct / Exception / Union / Service
+Statement ← WE doc:(Comment WE)* obj:(Include / Namespace / Const / Enum / TypeDef / Struct / Exception / Union / Service) {
+	if c,ok:=obj.(commenter); ok{
+		c.setComment(toDoc(doc))
+	}else if e,ok:=obj.(exception); ok{
+		(*Struct)(e).setComment(toDoc(doc))
+	}else if u,ok:=obj.(union); ok{
+		(*Struct)(u).setComment(toDoc(doc))
+	}
+	return obj, nil
+}
 
 Namespace ← "namespace" _ scope:[*a-z.-]+ _ ns:Identifier EOS {
 	return &namespace{

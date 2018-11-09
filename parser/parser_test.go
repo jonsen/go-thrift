@@ -24,8 +24,10 @@ func TestServiceParsing(t *testing.T) {
 		const map<string,string> M1 = {"hello": "world", "goodnight": "moon"}
 		const string S1 = "foo\"\tbar"
 		const string S2 = 'foo\'\tbar'
+		// L comment
 		const list<i64> L = [1, 2, 3];
 
+		/* myUnion comment */
 		union myUnion
 		{
 			// dbl comment1
@@ -35,7 +37,7 @@ func TestServiceParsing(t *testing.T) {
 			4: i64 int64
 				= 5;
 		}
-
+		// Operation comment
 		enum Operation
 		{
 			ADD = 1,
@@ -102,7 +104,8 @@ func TestServiceParsing(t *testing.T) {
 	}
 
 	expConst := &Constant{
-		Name: "L",
+		Name:    "L",
+		Comment: "L comment",
 		Type: &Type{
 			Name:      "list",
 			ValueType: &Type{Name: "i64"},
@@ -116,7 +119,8 @@ func TestServiceParsing(t *testing.T) {
 	}
 
 	expectedStruct := &Struct{
-		Name: "SomeStruct",
+		Name:    "SomeStruct",
+		Comment: "SomeStruct comment",
 		Fields: []*Field{
 			{
 				ID:      1,
@@ -145,7 +149,8 @@ func TestServiceParsing(t *testing.T) {
 	}
 
 	expectedUnion := &Struct{
-		Name: "myUnion",
+		Name:    "myUnion",
+		Comment: "myUnion comment",
 		Fields: []*Field{
 			{
 				ID:       1,
@@ -194,7 +199,8 @@ func TestServiceParsing(t *testing.T) {
 	}
 
 	expectedEnum := &Enum{
-		Name: "Operation",
+		Name:    "Operation",
+		Comment: "Operation comment",
 		Values: map[string]*EnumValue{
 			"ADD": &EnumValue{
 				Name:  "ADD",
