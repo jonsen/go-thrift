@@ -1,9 +1,9 @@
 Thrift Package for Go
 =====================
 
-[![Build Status](https://travis-ci.org/samuel/go-thrift.png)](https://travis-ci.org/samuel/go-thrift)
+[![Build Status](https://travis-ci.org/henrylee2cn/go-thrift.png)](https://travis-ci.org/henrylee2cn/go-thrift)
 
-API Documentation: <http://godoc.org/github.com/samuel/go-thrift>
+API Documentation: <http://godoc.org/github.com/henrylee2cn/go-thrift>
 
 License
 -------
@@ -72,11 +72,11 @@ The "parser" subdirectory contains a Thrift IDL parser, and "generator"
 contains a Go code generator. It could be extended to include other
 languages.
 
-How to use the generator:
+How to use the go-thrift:
 
-    $ go install github.com/samuel/go-thrift/generator
+    $ go install github.com/henrylee2cn/go-thrift/go-thrift
 
-    $ generator --help
+    $ go-thrift --help
     Usage of generator:
       -go.binarystring
             Always use string for binary instead of []byte
@@ -84,6 +84,8 @@ How to use the generator:
             Prefix for Thrift-generated go package imports
       -go.json.enumnum
             For JSON marshal enums by number instead of name
+      -go.norpc
+            RPC code is not generated
       -go.pointers
             Make all fields pointers
       -go.signedbytes

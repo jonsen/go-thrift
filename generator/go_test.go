@@ -2,7 +2,7 @@
 // Use of this source code is governed by a 3-clause BSD
 // license that can be found in the LICENSE file.
 
-package main
+package generator
 
 import (
 	"bytes"
@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/samuel/go-thrift/parser"
+	"github.com/henrylee2cn/go-thrift/parser"
 )
 
 func TestSimple(t *testing.T) {
@@ -33,12 +33,9 @@ func TestSimple(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to parse %s: %s", fn, err)
 		}
-		generator := &GoGenerator{
-			ThriftFiles: th,
-			Format:      true,
-			Pointers:    true,
-		}
-		if err := generator.Generate(outPath); err != nil {
+		if err := GenerateGo(outPath, th, Flags{
+			Pointers: true,
+		}); err != nil {
 			t.Fatalf("Failed to generate go for %s: %s", fn, err)
 		}
 		base := fn[:len(fn)-len(".thrift")]
@@ -66,13 +63,10 @@ func TestFlagGoSignedBytes(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to parse %s: %s", fn, err)
 		}
-		generator := &GoGenerator{
-			ThriftFiles: th,
-			Format:      true,
+		if err := GenerateGo(outPath, th, Flags{
 			Pointers:    false,
 			SignedBytes: true,
-		}
-		if err := generator.Generate(outPath); err != nil {
+		}); err != nil {
 			t.Fatalf("Failed to generate go for %s: %s", fn, err)
 		}
 		base := fn[:len(fn)-len(".thrift")]
