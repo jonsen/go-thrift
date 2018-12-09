@@ -60,7 +60,7 @@ type ScribeServer struct {
 
 func (s *ScribeServer) Log(req *ScribeLogRequest, res *ScribeLogResponse) error {
 	val, err := s.Implementation.Log(req.Messages)
-	switch e := err.(type) {
+	switch err.(type) {
 	}
 	res.Value = val
 	return err
