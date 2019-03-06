@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -254,19 +255,43 @@ func (g *goGenerator) resolveType(typ *parser.Type) string {
 
 func (g *goGenerator) formatField(field *parser.Field) string {
 	tags := ""
-	jsonTags := ""
 	if !field.Optional {
 		tags = ",required"
-	} else {
-		jsonTags = ",omitempty"
 	}
 	var opt typeOption
 	if field.Optional {
 		opt |= toOptional
 	}
 	return fmt.Sprintf(
-		"%s %s `thrift:\"%d%s\" json:\"%s%s\"`",
-		camelCase(field.Name), g.formatType(g.pkg, g.thrift, field.Type, opt), field.ID, tags, field.Name, jsonTags)
+		"%s %s `thrift:\"%d%s\" %s`",
+		camelCase(field.Name), g.formatType(g.pkg, g.thrift, field.Type, opt), field.ID, tags, getGotag(field))
+}
+
+func getGotag(field *parser.Field) string {
+	var gotag string
+	for _, v := range field.Annotations {
+		if v.Name == "go.tag" {
+			gotag = v.Value
+			break
+		}
+	}
+	var hasJSONTag bool
+	if gotag != "" {
+		_, hasJSONTag = reflect.StructTag(gotag).Lookup("json")
+	}
+	if !hasJSONTag {
+		var omitempty string
+		if field.Optional {
+			omitempty = ",omitempty"
+		}
+		jsonTag := fmt.Sprintf("json:%q", lowerCamelCase(field.Name)+omitempty)
+		if gotag != "" {
+			gotag += " " + jsonTag
+		} else {
+			gotag = jsonTag
+		}
+	}
+	return gotag
 }
 
 func (g *goGenerator) formatArguments(arguments []*parser.Field) string {

@@ -44,6 +44,30 @@ func TestSimple(t *testing.T) {
 	}
 }
 
+func TestTypedefs(t *testing.T) {
+	outPath, err := ioutil.TempDir("", "go-thrift-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(outPath)
+
+	p := &parser.Parser{}
+	fn := "../testfiles/generator/typedefs.thrift"
+	t.Logf("Testing %s", fn)
+	th, _, err := p.ParseFile(fn)
+	if err != nil {
+		t.Fatalf("Failed to parse %s: %s", fn, err)
+	}
+	if err := GenerateGo(outPath, th, Flags{
+		Pointers: true,
+	}); err != nil {
+		t.Fatalf("Failed to generate go for %s: %s", fn, err)
+	}
+	base := fn[:len(fn)-len(".thrift")]
+	name := filepath.Base(base)
+	compareFiles(t, outPath+"/gentest/"+name+".go", base+".go")
+}
+
 func TestFlagGoSignedBytes(t *testing.T) {
 	files, err := filepath.Glob("../testfiles/generator/withFlags/go.signedbytes/*.thrift")
 	if err != nil {

@@ -33,6 +33,12 @@ quirks and limitations.
 * []byte get encoded/decoded as a string because the Thrift binary type
   is the same as string on the wire.
 
+* Go supports `go.tag` annotation to define the field tag
+
+        1: Int32 b (go.tag="json:\"b_field\" xml:\"BField\"")
+        ->
+        B *int32 `thrift:"1,required" json:"b_field" xml:"BField"`
+
 RPC
 ---
 

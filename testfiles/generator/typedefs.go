@@ -13,7 +13,7 @@ type Int32 int32
 type String string
 
 type St struct {
-	B *Binary `thrift:"1,required" json:"b"`
-	S *String `thrift:"2,required" json:"s"`
+	B *Binary `thrift:"1,required" json:"b_field" xml:"BField"`
+	S *String `thrift:"2" json:"s,omitempty"`
 	I *Int32  `thrift:"3,required" json:"i"`
 }
