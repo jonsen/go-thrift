@@ -15,6 +15,12 @@ import (
 
 func TestServiceParsing(t *testing.T) {
 	thrift, err := parse(`
+// IDL doc1
+/* IDL doc2 */
+
+/**
+* IDL doc3
+*/
 		include "other.thrift"
 
 		namespace go somepkg
@@ -36,6 +42,7 @@ func TestServiceParsing(t *testing.T) {
 			3: i32 int32 = 3;
 			4: i64 int64
 				= 5;
+			// bug test
 		}
 		// Operation comment
 		enum Operation
@@ -47,6 +54,7 @@ func TestServiceParsing(t *testing.T) {
 		enum NoNewLineBeforeBrace {
 			ADD = 1,
 			SUBTRACT = 2
+			// bug test
 		}
 
 		service ServiceNAME extends SomeBase
@@ -58,6 +66,7 @@ func TestServiceParsing(t *testing.T) {
 			string login(1:string password) throws (1:AuthenticationException authex), // login handler
 			oneway void explode(); /* explode handler */
 			blah something()
+			// bug test
 		}
 
 		// SomeStruct comment
@@ -65,7 +74,8 @@ func TestServiceParsing(t *testing.T) {
 			// dbl comment1
 			1: double dbl = 1.2, // dbl comment2
 			// abc comment1
-			2: optional string abc // abc comment2
+			2: optional string abc, // abc comment2
+			// bug test
 		}
 
 		struct NewLineBeforeBrace
@@ -76,6 +86,10 @@ func TestServiceParsing(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("Service parsing failed with error %s", err.Error())
+	}
+	expecteDoc := "IDL doc1\nIDL doc2\nIDL doc3"
+	if thrift.Doc != expecteDoc {
+		t.Errorf("Expected for IDL doc:\n%q\ngot\n%q", expecteDoc, thrift.Doc)
 	}
 	var namespaces = map[string]string{
 		"go":                "somepkg",
@@ -545,7 +559,7 @@ func TestParseFiles(t *testing.T) {
 	}
 
 	for _, f := range files {
-		_, err := ParseFile(filepath.Join("../testfiles", f))
+		_, err := ParseFile(filepath.Join("./testfiles", f))
 		if err != nil {
 			t.Errorf("Failed to parse file %q: %v", f, err)
 		}

@@ -10,6 +10,18 @@ import (
 	"strings"
 )
 
+type Thrift struct {
+	Includes   map[string]string // name -> unique identifier (absolute path generally)
+	Typedefs   map[string]*Typedef
+	Namespaces map[string]string
+	Constants  map[string]*Constant
+	Enums      map[string]*Enum
+	Structs    map[string]*Struct
+	Exceptions map[string]*Struct
+	Unions     map[string]*Struct
+	Services   map[string]*Service
+	Doc        string
+}
 
 type Type struct {
 	Name        string
@@ -100,18 +112,6 @@ func (s *Service) setComment(comment string) {
 	s.Comment = comment
 }
 
-type Thrift struct {
-	Includes   map[string]string // name -> unique identifier (absolute path generally)
-	Typedefs   map[string]*Typedef
-	Namespaces map[string]string
-	Constants  map[string]*Constant
-	Enums      map[string]*Enum
-	Structs    map[string]*Struct
-	Exceptions map[string]*Struct
-	Unions     map[string]*Struct
-	Services   map[string]*Service
-}
-
 type Identifier string
 
 type KeyValue struct {
@@ -192,7 +192,12 @@ func toComment(v interface{}) string {
 	for i, v := range c {
 		b[i] = v.([]interface{})[1].([]uint8)[0]
 	}
-	return strings.TrimSpace(SpaceInOne(string(b)))
+	s := strings.TrimSpace(SpaceInOne(string(b)))
+	for len(s) > 0 && s[0] == '*' {
+		s = strings.TrimLeft(s, "*")
+		s = strings.TrimSpace(s)
+	}
+	return s
 }
 
 func toDoc(v interface{}) string {
@@ -241,7 +246,7 @@ func SpaceInOne(s string) string {
 
 }
 
-Grammar ← __ statements:( Statement WE )* (EOF / SyntaxError) {
+Grammar ← WE doc:(Comment WE)* statements:( Statement WE )* (EOF / SyntaxError) {
 	thrift := &Thrift{
 		Includes: make(map[string]string),
 		Namespaces: make(map[string]string),
@@ -252,6 +257,7 @@ Grammar ← __ statements:( Statement WE )* (EOF / SyntaxError) {
 		Exceptions: make(map[string]*Struct),
 		Unions: make(map[string]*Struct),
 		Services: make(map[string]*Service),
+		Doc: toDoc(doc),
 	}
 	stmts := toIfaceSlice(statements)
 	for _, st := range stmts {
@@ -319,7 +325,7 @@ Const ← "const" _ typ:FieldType _ name:Identifier __ "=" __ value:ConstValue E
 	}, nil
 }
 
-Enum ← "enum" _ name:Identifier __ '{' __ values:(EnumValue __)* '}' _ annotations:TypeAnnotations? EOS {
+Enum ← "enum" _ name:Identifier __ '{' __ values:(EnumValue __)* __ '}' _ annotations:TypeAnnotations? EOS {
 	vs := toIfaceSlice(values)
 	en := &Enum{
 		Name: string(name.(Identifier)),
@@ -366,7 +372,7 @@ TypeDef ← "typedef" _ typ:FieldType _ name:Identifier _ annotations:TypeAnnota
 Struct ← "struct" _ st:StructLike { return st.(*Struct), nil }
 Exception ← "exception" _ st:StructLike { return exception(st.(*Struct)), nil }
 Union ← "union" _ st:StructLike { return union(st.(*Struct)), nil }
-StructLike ← name:Identifier __ '{' WE fields:FieldList '}' _ annotations:TypeAnnotations? EOS {
+StructLike ← name:Identifier __ '{' WE fields:FieldList __ '}' _ annotations:TypeAnnotations? EOS {
 	st := &Struct{
 		Name: string(name.(Identifier)),
 		Annotations: toAnnotations(annotations),
@@ -407,7 +413,7 @@ FieldReq ← ("required" / "optional") {
 	return !bytes.Equal(c.text, []byte("optional")), nil
 }
 
-Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' methods:(Function WE)* ('}' / EndOfServiceError) _ annotations:TypeAnnotations?  EOS {
+Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' methods:(Function WE)* (__ '}' / EndOfServiceError) _ annotations:TypeAnnotations?  EOS {
 	ms := methods.([]interface{})
 	svc := &Service{
 		Name: string(name.(Identifier)),
@@ -556,7 +562,7 @@ ConstList ← '[' __ values:(ConstValue __ ListSeparator? __)* __ ']' {
 	return vs, nil
 }
 
-ConstMap ← '{' __ values:(ConstValue __ ':' __ ConstValue __ (',' / &'}') __)* '}' {
+ConstMap ← '{' __ values:(ConstValue __ ':' __ ConstValue __ (',' / &'}') __)* __ '}' {
 	if values == nil {
 		return nil, nil
 	}
