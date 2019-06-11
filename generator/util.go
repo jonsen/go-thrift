@@ -43,6 +43,18 @@ func lowerCamelCase(st string) string {
 		return strings.ToLower(st)
 	}
 	st = CamelCase(st)
+	switch st {
+	case "ID":
+		return "id"
+	case "URL":
+		return "url"
+	case "HTTP":
+		return "http"
+	case "API":
+		return "api"
+	case "TODO":
+		return "todo"
+	}
 	return strings.ToLower(st[:1]) + st[1:]
 }
 

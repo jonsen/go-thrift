@@ -104,6 +104,7 @@ func compareFiles(t *testing.T, actualPath, expectedPath string) {
 	if err != nil {
 		t.Fatalf("Failed to read %s: %s", actualPath, err)
 	}
+	t.Log(expectedPath)
 	ex, err := ioutil.ReadFile(expectedPath)
 	if err != nil {
 		t.Fatalf("Failed to read %s: %s", expectedPath, err)
