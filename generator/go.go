@@ -284,7 +284,7 @@ func getGotag(field *parser.Field) string {
 		if field.Optional {
 			omitempty = ",omitempty"
 		}
-		jsonTag := fmt.Sprintf("json:%q", lowerCamelCase(field.Name)+omitempty)
+		jsonTag := fmt.Sprintf("json:%q", field.Name+omitempty)
 		if gotag != "" {
 			gotag += " " + jsonTag
 		} else {
