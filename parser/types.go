@@ -42,6 +42,7 @@ type Field struct {
 	ID          int
 	Name        string
 	Optional    bool
+	Required    bool
 	Type        *Type
 	Default     interface{}
 	Annotations []*Annotation

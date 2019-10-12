@@ -196,9 +196,12 @@ Field ← id:IntConstant _ ':' _ req:FieldReq? _ typ:FieldType _ name:Identifier
 		Type     : typ.(*Type),
 		Annotations: toAnnotations(annotations),
 	}
-	if req != nil && !req.(bool) {
-		f.Optional = true
-	}
+    switch requiredness, _ := req.(string); requiredness {
+    case "required":
+        f.Required = true
+    case "optional":
+        f.Optional = true
+    }
 	if def != nil {
 		f.Default = def.([]interface{})[2]
 	}
@@ -206,7 +209,7 @@ Field ← id:IntConstant _ ':' _ req:FieldReq? _ typ:FieldType _ name:Identifier
 }
 
 FieldReq ← ("required" / "optional") {
-	return !bytes.Equal(c.text, []byte("optional")), nil
+	return string(c.text), nil
 }
 
 Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' __ methods:(Function __)* ('}' / EndOfServiceError) _ annotations:TypeAnnotations?  EOS {

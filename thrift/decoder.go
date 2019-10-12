@@ -7,6 +7,7 @@ package thrift
 import (
 	"reflect"
 	"runtime"
+	"sort"
 )
 
 // Decoder is the interface that allows types to deserialize themselves from a Thrift stream
@@ -142,7 +143,7 @@ func (d *decoder) readValue(thriftType byte, rf reflect.Value) {
 		}
 
 		meta := encodeFields(v.Type())
-		req := meta.required
+		var have []int
 		for {
 			ftype, id, err := d.r.ReadFieldBegin()
 			if err != nil {
@@ -156,7 +157,9 @@ func (d *decoder) readValue(thriftType byte, rf reflect.Value) {
 			if !ok {
 				SkipValue(d.r, ftype)
 			} else {
-				req &= ^(uint64(1) << uint64(id))
+				if ef.required {
+					have = append(have, int(id))
+				}
 				fieldValue := v.Field(ef.i)
 				if ftype != ef.fieldType {
 					d.error(&UnsupportedValueError{Value: fieldValue, Str: "type mismatch"})
@@ -173,16 +176,21 @@ func (d *decoder) readValue(thriftType byte, rf reflect.Value) {
 			d.error(err)
 		}
 
-		if req != 0 {
-			for i := 0; req != 0; i, req = i+1, req>>1 {
-				if req&1 != 0 {
-					d.error(&MissingRequiredField{
-						StructName: v.Type().Name(),
-						FieldName:  meta.fields[i].name,
-					})
+		if len(have) < len(meta.required) {
+			sort.Ints(have)
+			i := 0
+			for _, id := range have {
+				if id == meta.required[i] {
+					i++
+					continue
 				}
+				d.error(&MissingRequiredField{
+					StructName: v.Type().Name(),
+					FieldName:  meta.fields[id].name,
+				})
 			}
 		}
+
 	case TypeMap:
 		keyType := v.Type().Key()
 		valueType := v.Type().Elem()
