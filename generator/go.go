@@ -272,6 +272,8 @@ func (g *GoGenerator) formatField(field *parser.Field) string {
 		omitempty = ",omitempty"
 	}
 
+	dbTag := field.Name
+
 	goTags := fmt.Sprintf(
 		"json:%q", field.Name+omitempty,
 	)
@@ -283,10 +285,10 @@ func (g *GoGenerator) formatField(field *parser.Field) string {
 	}
 
 	return fmt.Sprintf(
-		"%s %s `thrift:\"%d%s\" %s`",
+		"%s %s `thrift:\"%d%s\" db:\"%s\" %s`",
 		camelCase(field.Name),
 		g.formatType(g.pkg, g.thrift, field.Type, opt),
-		field.ID, tags, goTags,
+		field.ID, tags, dbTag, goTags,
 	)
 }
 
