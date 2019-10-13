@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/samuel/go-thrift/parser"
+	"github.com/jonsen/go-thrift/parser"
 )
 
 var (
@@ -201,7 +201,7 @@ func (g *GoGenerator) formatType(pkg string, thrift *parser.Thrift, typ *parser.
 		return ptr + name
 	}
 	if e := thrift.Enums[typ.Name]; e != nil {
-		name := e.Name
+		name := camelCase(e.Name)
 		if pkg != g.pkg {
 			name = pkg + "." + name
 		}
