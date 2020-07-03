@@ -71,16 +71,32 @@ type Service struct {
 	Annotations []*Annotation
 }
 
+type Controller struct {
+	Name        string
+	Extends     string
+	Methods     map[string]*Method
+	Annotations []*Annotation
+}
+
+type Dao struct {
+	Name        string
+	Extends     string
+	Methods     map[string]*Method
+	Annotations []*Annotation
+}
+
 type Thrift struct {
-	Includes   map[string]string // name -> unique identifier (absolute path generally)
-	Typedefs   map[string]*Typedef
-	Namespaces map[string]string
-	Constants  map[string]*Constant
-	Enums      map[string]*Enum
-	Structs    map[string]*Struct
-	Exceptions map[string]*Struct
-	Unions     map[string]*Struct
-	Services   map[string]*Service
+	Includes    map[string]string // name -> unique identifier (absolute path generally)
+	Typedefs    map[string]*Typedef
+	Namespaces  map[string]string
+	Constants   map[string]*Constant
+	Enums       map[string]*Enum
+	Structs     map[string]*Struct
+	Exceptions  map[string]*Struct
+	Unions      map[string]*Struct
+	Services    map[string]*Service
+	Controllers map[string]*Controller
+	Daos        map[string]*Dao
 }
 
 type Identifier string

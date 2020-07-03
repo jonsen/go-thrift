@@ -64,6 +64,8 @@ Grammar ← __ statements:( Statement __ )* (EOF / SyntaxError) {
 		Exceptions: make(map[string]*Struct),
 		Unions: make(map[string]*Struct),
 		Services: make(map[string]*Service),
+		Controllers: make(map[string]*Controller),
+		Daos: make(map[string]*Dao),
 	}
 	stmts := toIfaceSlice(statements)
 	for _, st := range stmts {
@@ -84,6 +86,10 @@ Grammar ← __ statements:( Statement __ )* (EOF / SyntaxError) {
 			thrift.Unions[v.Name] = unionToStruct(v)
 		case *Service:
 			thrift.Services[v.Name] = v
+		case *Controller:
+			thrift.Controllers[v.Name] = v
+		case *Dao:
+			thrift.Daos[v.Name] = v
 		case include:
 			name := filepath.Base(string(v))
 			if ix := strings.LastIndex(name, "."); ix > 0 {
@@ -105,7 +111,7 @@ Include ← "include" _ file:Literal EOS {
 	return include(file.(string)), nil
 }
 
-Statement ← Include / Namespace / Const / Enum / TypeDef / Struct / Exception / Union / Service
+Statement ← Include / Namespace / Const / Enum / TypeDef / Struct / Exception / Union / Service / Controller / Dao
 
 Namespace ← "namespace" _ scope:[*a-z.-]+ _ ns:Identifier EOS {
 	return &namespace{
@@ -228,8 +234,48 @@ Service ← "service" _ name:Identifier _ extends:("extends" __ Identifier __)? 
 	}
 	return svc, nil
 }
+
+Controller ← "controller" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' __ methods:(Function __)* ('}' / EndOfControllerError) _ annotations:TypeAnnotations?  EOS {
+	ms := methods.([]interface{})
+	svc := &Controller{
+		Name: string(name.(Identifier)),
+		Methods: make(map[string]*Method, len(ms)),
+		Annotations: toAnnotations(annotations),
+	}
+	if extends != nil {
+		svc.Extends = string(extends.([]interface{})[2].(Identifier))
+	}
+	for _, m := range ms {
+		mt :=  m.([]interface{})[0].(*Method)
+		svc.Methods[mt.Name] = mt
+	}
+	return svc, nil
+}
+
+Dao ← "dao" _ name:Identifier _ extends:("extends" __ Identifier __)? __ '{' __ methods:(Function __)* ('}' / EndOfDaoError) _ annotations:TypeAnnotations?  EOS {
+	ms := methods.([]interface{})
+	svc := &Dao{
+		Name: string(name.(Identifier)),
+		Methods: make(map[string]*Method, len(ms)),
+		Annotations: toAnnotations(annotations),
+	}
+	if extends != nil {
+		svc.Extends = string(extends.([]interface{})[2].(Identifier))
+	}
+	for _, m := range ms {
+		mt :=  m.([]interface{})[0].(*Method)
+		svc.Methods[mt.Name] = mt
+	}
+	return svc, nil
+}
 EndOfServiceError ← . {
 	return nil, errors.New("parser: expected end of service")
+}
+EndOfControllerError ← . {
+	return nil, errors.New("parser: expected end of controller")
+}
+EndOfDaoError ← . {
+	return nil, errors.New("parser: expected end of dao")
 }
 
 Function ← oneway:("oneway" __)? typ:FunctionType __ name:Identifier _ '(' __ arguments:FieldList ')' __ exceptions:Throws? _ annotations:TypeAnnotations? ListSeparator? {
