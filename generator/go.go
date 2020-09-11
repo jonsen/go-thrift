@@ -98,6 +98,7 @@ var basicTypes = map[string]bool{
 	"i32":    true,
 	"i64":    true,
 	"double": true,
+	"null":   true,
 }
 
 func init() {
@@ -183,6 +184,8 @@ func (g *GoGenerator) formatType(pkg string, thrift *parser.Thrift, typ *parser.
 		return ptr + "int64"
 	case "double":
 		return ptr + "float64"
+	case "null":
+		return "interface{}"
 	case "set":
 		valueType := g.formatKeyType(pkg, thrift, typ.ValueType)
 		return "map[" + valueType + "]struct{}"
